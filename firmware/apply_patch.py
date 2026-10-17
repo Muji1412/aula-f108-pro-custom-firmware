@@ -9,6 +9,7 @@ Usage (Windows, Python 3.8+):
     python apply_patch.py path\to\AULA_F108_Pro_Firmware.exe
     python apply_patch.py path\to\AULA_F108_Pro_Firmware.exe -o my_custom_updater.exe
     python apply_patch.py --from-bin stock_image.bin --bin-out patched_image.bin     (raw image, any OS)
+    python apply_patch.py path\to\AULA_F108_Pro_Firmware.exe --patch macros\pc-mac-toggle.patch.json
 """
 import argparse
 import ctypes
@@ -23,8 +24,8 @@ HERE = Path(__file__).parent
 RT_RCDATA, RES_ID = 10, 4000
 
 
-def load_patch():
-    return json.loads((HERE / "patch_data.json").read_text(encoding="utf-8"))
+def load_patch(path=None):
+    return json.loads(Path(path or HERE / "patch_data.json").read_text(encoding="utf-8"))
 
 
 def read_resource(exe):
@@ -92,8 +93,9 @@ def main():
     ap.add_argument("-o", "--out", help="output updater exe (default: <name>_CUSTOM.exe next to the input)")
     ap.add_argument("--from-bin", help="read the stock image from a raw .bin instead of an exe")
     ap.add_argument("--bin-out", help="also (or only, with --from-bin) write the patched raw image")
+    ap.add_argument("--patch", help="patch file to apply (default: patch_data.json), e.g. one made by build_firmware.py --patch-out")
     a = ap.parse_args()
-    patch = load_patch()
+    patch = load_patch(a.patch)
 
     if a.from_bin:
         image, lang = Path(a.from_bin).read_bytes(), 0

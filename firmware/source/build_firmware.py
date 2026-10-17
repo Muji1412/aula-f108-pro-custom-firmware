@@ -15,22 +15,35 @@ Patches (addresses come from the analysis of the official image):
   0x2E84  knob press in volume mode: Mute -> Play/Pause
   0x4BC0  BL FUN_0000592A -> uart_hook  direct RGB over the 2.4G dongle
   0x1A28  ldr/movs -> BL rx_stub        USB SET_FEATURE hook for direct RGB over the cable
+
+Optional FN macros (docs/09-fn-macros.md), only with --macros FILE:
+  0x333A  BL FUN_00002D5C -> fn_hook    FN combinations that run lists of stock FN actions
+Without --macros the output is the standard patch. --patch-out writes the result as a patch file for
+apply_patch.py --patch (or, for the standard build, a new patch_data.json).
 """
 import argparse
+import hashlib
+import json
 import os
 import struct
 import subprocess
+import sys
 from pathlib import Path
 
 here = Path(__file__).parent
 BASE = 0x1A600
 CPU = ["-mcpu=cortex-m0", "-mthumb"]
+CFLAGS = ["-Os", "-ffreestanding", "-nostdlib"]
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--stock", required=True, help="stock firmware image (RCDATA/4000), 262144 bytes")
 ap.add_argument("--out", default="patched_image.bin")
+ap.add_argument("--macros", help="FN macros file (JSON), see docs/09-fn-macros.md")
+ap.add_argument("--patch-out", help="also write the result as a patch file (format of patch_data.json)")
 args = ap.parse_args()
 BIN = os.environ.get("ARM_GNU_BIN", "")
+stock = Path(args.stock).read_bytes()
+assert len(stock) == 0x40000, "unexpected image size"
 
 
 def run(exe, *a):
@@ -40,8 +53,21 @@ def run(exe, *a):
 
 build = here / "_build"
 build.mkdir(exist_ok=True)
+sources = [("custom.c", CFLAGS), ("stub.S", [])]
+if args.macros:
+    sys.path.insert(0, str(here))
+    import fn_macros_cfg
+    try:
+        macros = fn_macros_cfg.load(args.macros, stock)
+    except fn_macros_cfg.MacroError as e:
+        sys.exit("macros: %s" % e)
+    (build / "fn_macros_cfg.h").write_text(fn_macros_cfg.header(macros, args.macros), encoding="utf-8")
+    sources.append(("fn_macros.c", CFLAGS + ["-I", build]))
+    for m in macros:
+        if m["replaces_stock"]:
+            print("note: %s replaces the stock action of this combination" % m["name"])
 objs = []
-for s, flags in (("custom.c", ["-Os", "-ffreestanding", "-nostdlib"]), ("stub.S", [])):
+for s, flags in sources:
     o = build / (s + ".o")
     run("arm-none-eabi-gcc", *CPU, *flags, "-c", here / s, "-o", o)
     objs.append(o)
@@ -50,8 +76,7 @@ run("arm-none-eabi-objcopy", "-O", "binary", build / "custom.elf", build / "cust
 sym = {l.split()[2]: int(l.split()[0], 16) for l in run("arm-none-eabi-nm", build / "custom.elf").splitlines()}
 code = (build / "custom.bin").read_bytes()
 
-img = bytearray(Path(args.stock).read_bytes())
-assert len(img) == 0x40000, "unexpected image size"
+img = bytearray(stock)
 assert all(b == 0xFF for b in img[BASE:BASE + len(code)]), "target area is not empty"
 img[BASE:BASE + len(code)] = code
 
@@ -82,6 +107,32 @@ assert img[0x4BC0:0x4BC4] == bl(0x4BC0, 0x592A), "unexpected code at 0x4BC0"
 img[0x4BC0:0x4BC4] = bl(0x4BC0, sym["uart_hook"])
 assert img[0x1A28:0x1A2C].hex() == "34490122", "unexpected code at 0x1A28"
 img[0x1A28:0x1A2C] = bl(0x1A28, sym["rx_stub"])
+if args.macros:
+    assert img[0x333A:0x333E] == bl(0x333A, 0x2D5C), "unexpected code at 0x333A"
+    img[0x333A:0x333E] = bl(0x333A, sym["fn_hook"])
 
 Path(args.out).write_bytes(img)
-print("OK: %s, code %d bytes" % (args.out, len(code)))
+print("OK: %s, code %d bytes%s" % (args.out, len(code), ", %d FN macros" % len(macros) if args.macros else ""))
+
+if args.patch_out:
+    ref = json.loads((here.parent / "patch_data.json").read_text(encoding="utf-8"))
+    writes, i = [], 0
+    while i < len(img):
+        if img[i] != stock[i]:
+            j = i
+            while j < len(img) and img[j] != stock[j]:
+                j += 1
+            writes.append({"offset": i, "hex": img[i:j].hex()})
+            i = j
+        else:
+            i += 1
+    desc = ref["description"]
+    if args.macros:
+        desc = desc.replace("(RCDATA 4000).", "(RCDATA 4000) with the FN macros of %s." % Path(args.macros).name)
+    patch = {"format": 1, "description": desc,
+             "stock_image_sha256": hashlib.sha256(stock).hexdigest(), "stock_image_size": len(stock),
+             "patched_image_sha256": hashlib.sha256(img).hexdigest(), "stock_exe_sha256": ref["stock_exe_sha256"],
+             "writes": writes}
+    with open(args.patch_out, "w", encoding="utf-8", newline="\n") as f:
+        f.write(json.dumps(patch, indent=1, ensure_ascii=False))
+    print("patch file: %s, %d runs" % (args.patch_out, len(writes)))

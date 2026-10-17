@@ -1,0 +1,8 @@
+{
+ "about": "One key per device: FN+J Windows PC on the cable, FN+K Mac on the 2.4G dongle, FN+L iPad on Bluetooth 1. See docs/09-fn-macros.md.",
+ "macros": [
+  {"key": "FN+J", "do": ["WIN", "USB"]},
+  {"key": "FN+K", "do": ["MAC", "2.4G"]},
+  {"key": "FN+L", "do": ["IOS", "BT1"]}
+ ]
+}
