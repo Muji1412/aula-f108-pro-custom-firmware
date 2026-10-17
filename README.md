@@ -1,3 +1,5 @@
+# Thanks to Fitertom, Danke schön!
+
 # AULA F108 Pro custom firmware, OpenRGB support and on-screen light menu
 
 Unofficial. Not affiliated with or endorsed by AULA or Sonix. "AULA" is a trademark of its owner.
