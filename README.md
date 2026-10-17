@@ -6,6 +6,11 @@ Unofficial. Not affiliated with or endorsed by AULA or Sonix. "AULA" is a tradem
 This project patches the firmware of the AULA F108 Pro keyboard (Sonix SN32F290 MCU, 240x135 LCD, rotary knob)
 and provides an OpenRGB controller for it.
 
+> **Fork of [Fitertom/aula-f108-pro-custom-firmware](https://github.com/Fitertom/aula-f108-pro-custom-firmware)** that adds
+> optional **FN macros**: your own FN combinations that run stock actions, e.g. FN+W to move the keyboard between a wired
+> Windows PC and a Mac on the 2.4G dongle. See [docs/09-fn-macros.md](docs/09-fn-macros.md). Without a macros file
+> everything below is unchanged.
+
 ## What you get
 
 - Battery level on the LED zone above the arrow keys: a red-to-green gradient that blinks below 20 percent.
@@ -17,6 +22,8 @@ and provides an OpenRGB controller for it.
 - Direct RGB control of all LEDs (keys, arrow zone, both side strips) from the PC, over the USB cable and over the
   2.4G dongle. The colors live in RAM only, so no flash memory is written and nothing wears out.
 - An OpenRGB controller that uses this mode (wired and 2.4G).
+- Optional FN macros: one FN combination runs a list of stock actions (connection, system mode, lighting), optionally
+  depending on the current connection or system mode. Ready-made: FN+W toggles wired + Windows / 2.4G + Mac.
 
 Everything else works as before: the stock effects, FN combinations, the clock, GIFs, the driver software.
 
@@ -44,6 +51,7 @@ Detailed steps: [docs/01-flashing.md](docs/01-flashing.md). How it was made and 
 |---|---|
 | `firmware/apply_patch.py`, `firmware/patch_data.json` | Patcher. Contains only the bytes written by this project, no official code. |
 | `firmware/source/` | C and assembly source of the patch and the build script (for developers). |
+| `firmware/macros/` | FN macro examples and ready-made patch files for `apply_patch.py --patch`. |
 | `openrgb/` | OpenRGB controller source (GPL-2.0-or-later, same as OpenRGB) and install helper scripts. |
 | `tools/` | Python tools: direct RGB over cable and dongle, a small RGB studio, battery reader. |
 | `dev/` | Firmware emulator (Unicorn) and helper scripts used for testing before flashing. |

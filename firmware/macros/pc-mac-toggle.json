@@ -1,0 +1,11 @@
+{
+ "about": "FN+W toggles between a wired Windows PC and a Mac on the 2.4G dongle. See docs/09-fn-macros.md.",
+ "macros": [
+  {
+   "key": "FN+W",
+   "if": {"connection": "wired"},
+   "then": ["MAC", "2.4G"],
+   "else": ["WIN", "USB"]
+  }
+ ]
+}

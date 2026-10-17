@@ -21,8 +21,12 @@ The script compiles `custom.c` and `stub.S`, links at 0x1A600 with `link.ld`, wr
 the call sites after checking that they contain what is expected. The output must be byte-identical to
 what `apply_patch.py` produces (compare the SHA-256 with `patched_image_sha256` in `patch_data.json`).
 
-To make a new `patch_data.json` after you change something, diff the stock and patched images and write the changed
-byte runs as `{"offset": ..., "hex": ...}` records with the two new SHA-256 values. Keep only your own bytes in it.
+To make a new `patch_data.json` after you change something, add `--patch-out firmware\patch_data.json`: it diffs the stock
+and patched images and writes the changed byte runs as `{"offset": ..., "hex": ...}` records with the two new SHA-256 values,
+so only your own bytes end up in it. For the unchanged source it reproduces the committed `patch_data.json` exactly.
+
+With `--macros my_macros.json` the build also compiles `fn_macros.c` with the macro table and hooks 0x333A, see
+[09-fn-macros.md](09-fn-macros.md). That code is linked after the rest, so the other functions keep their addresses.
 
 ## Test before flashing
 

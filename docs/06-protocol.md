@@ -22,6 +22,7 @@ analysing the official firmware image and by experiments on the author's unit. N
 | 0x2E84 | `movs r1,#0xE2` (Mute) | `movs r1,#0xCD` (Play/Pause) |
 | 0x4BC0 | `BL FUN_0000592A` (UART command dispatcher) | `BL uart_hook` (direct RGB over the dongle) |
 | 0x1A28 | `ldr r1,=0x20000040; movs r2,#1` in the USB handler | `BL rx_stub` (direct RGB over the cable) |
+| 0x333A | `BL FUN_00002D5C` (FN connection / system mode / knob keys) | only with FN macros: `BL fn_hook`, see [09-fn-macros.md](09-fn-macros.md) |
 | 0x1A600+ | free space (0xFF) | the new code, about 4.5 KB |
 
 RAM used by the patch: 0x200001F8..0x200001FD, 0x200001FE, 0x20000202, 0x20000203 (direct-mode flag, stamp, tick, menu state, ARROWS
